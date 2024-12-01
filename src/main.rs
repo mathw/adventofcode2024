@@ -9,14 +9,12 @@ fn main() -> Result<(), Box<dyn Error>> {
         let daynum = u32::from_str(&day)?;
 
         match daynum {
-            1 => return day1::run(),
-            _ => return Err(format!("Unrecognised day {}", daynum).into()),
+            1 => day1::run(),
+            _ => Err(format!("Unrecognised day {}", daynum).into()),
         }
     } else {
-        return Err("First argument must be a day number to run"
+        Err("First argument must be a day number to run"
             .to_string()
-            .into());
+            .into())
     }
-
-    Ok(())
 }
