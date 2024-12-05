@@ -10,6 +10,9 @@ pub fn run() -> Result<(), Box<dyn Error>> {
     let part1 = count_xmas(&grid);
     println!("Part 1: XMAS appears {} times", part1);
 
+    let part2 = count_x_mas(&grid);
+    println!("Part 1: X-MAS appears {} times", part2);
+
     Ok(())
 }
 
@@ -27,14 +30,17 @@ fn load_grid(input: &str) -> Grid<Letter> {
     Grid::from_vec(letters, line_width)
 }
 
-fn all_xs(grid: &Grid<Letter>) -> impl Iterator<Item = (usize, usize)> + use<'_> {
+fn all_of<'a>(
+    grid: &'a Grid<Letter>,
+    needle: &'a Letter,
+) -> impl Iterator<Item = (usize, usize)> + use<'a> {
     grid.indexed_iter()
-        .filter_map(|(p, letter)| if letter == &Letter::X { Some(p) } else { None })
+        .filter_map(move |(p, letter)| if letter == needle { Some(p) } else { None })
 }
 
 fn count_xmas(grid: &Grid<Letter>) -> usize {
     let target = vec![Letter::X, Letter::M, Letter::A, Letter::S];
-    all_xs(grid)
+    all_of(grid, &Letter::X)
         .flat_map(|(row, col)| grid.lines_from(row, col, 4))
         .map(|line| {
             line.into_iter()
@@ -44,6 +50,36 @@ fn count_xmas(grid: &Grid<Letter>) -> usize {
         })
         .filter(|line| *line == target)
         .count()
+}
+
+fn count_x_mas(grid: &Grid<Letter>) -> usize {
+    all_of(grid, &Letter::A)
+        .filter(|p| is_x_mas(grid, *p))
+        .count()
+}
+
+fn is_x_mas(grid: &Grid<Letter>, (row, col): (usize, usize)) -> bool {
+    is_x_mas_impl(grid, (row, col)).unwrap_or(false)
+}
+
+fn is_x_mas_impl(grid: &Grid<Letter>, (row, col): (usize, usize)) -> Option<bool> {
+    if row == 0 || col == 0 || grid.size().0 - 1 == row || grid.size().1 - 1 == col {
+        // on the edge, not possible
+        return Some(false);
+    }
+
+    let top_left = *grid.get(row - 1, col - 1)?;
+    let top_right = *grid.get(row - 1, col + 1)?;
+    let bottom_left = *grid.get(row + 1, col - 1)?;
+    let bottom_right = *grid.get(row + 1, col + 1)?;
+
+    match (top_left, bottom_right, top_right, bottom_left) {
+        (Letter::M, Letter::S, Letter::M, Letter::S) => Some(true),
+        (Letter::M, Letter::S, Letter::S, Letter::M) => Some(true),
+        (Letter::S, Letter::M, Letter::S, Letter::M) => Some(true),
+        (Letter::S, Letter::M, Letter::M, Letter::S) => Some(true),
+        _ => Some(false),
+    }
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -107,7 +143,7 @@ fn test_find_xs() {
     let input = "XMA
 SXX";
     let grid = load_grid(input);
-    let xs = all_xs(&grid).collect::<Vec<_>>();
+    let xs = all_of(&grid, &Letter::X).collect::<Vec<_>>();
     assert_eq!(xs, vec![(0, 0), (1, 1), (1, 2)]);
 }
 
@@ -129,4 +165,33 @@ XMAS.S
     );
     let all_xmas = count_xmas(&grid);
     assert_eq!(all_xmas, 4);
+}
+
+#[test]
+fn test_is_xmas() {
+    let grid = load_grid(
+        "M.S
+.A.
+M.S",
+    );
+
+    assert!(is_x_mas(&grid, (1, 1)));
+    assert!(!is_x_mas(&grid, (0, 0)));
+    assert!(!is_x_mas(&grid, (1, 2)));
+
+    let grid = load_grid(
+        "S.S
+.A.
+M.M",
+    );
+
+    assert!(is_x_mas(&grid, (1, 1)));
+
+    let grid = load_grid(
+        "S.S
+.A.
+M.S",
+    );
+
+    assert!(!is_x_mas(&grid, (1, 1)));
 }
