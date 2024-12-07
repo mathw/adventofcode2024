@@ -1,6 +1,6 @@
 use std::{error::Error, fmt::Display};
 
-use grid::{grid, Grid};
+use grid::Grid;
 
 use crate::grid_extensions::GridExtensions;
 
@@ -134,7 +134,7 @@ S%!";
     let grid = load_grid(input);
     assert_eq!(
         grid,
-        grid![[Letter::X, Letter::M, Letter::A][Letter::S, Letter::Boring,Letter::Boring]]
+        grid::grid![[Letter::X, Letter::M, Letter::A][Letter::S, Letter::Boring,Letter::Boring]]
     );
 }
 
