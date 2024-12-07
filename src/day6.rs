@@ -1,5 +1,5 @@
 use grid::Grid;
-use std::error::Error;
+use std::{collections::HashSet, error::Error};
 
 pub fn run() -> Result<(), Box<dyn Error>> {
     let input = include_str!("inputs/day6.txt");
@@ -17,6 +17,33 @@ pub fn run() -> Result<(), Box<dyn Error>> {
 fn part1(mut map: Map, pos: (usize, usize)) -> usize {
     patrol(&mut map, pos);
     map.0.iter().filter(|s| s == &&MapSquare::Visited).count()
+}
+
+/// Runs patrols by inserting a random new obstruction into the map and seeing if it makes a loop
+/// Returns the count of how many different obstructions could be added which cause a loop
+/// This is brute-force and may prove far too slow to actually run in reality
+/// Initial testing shows it's surprisingly fast, but the loop detection appears to detect too many loops
+fn part2(map: Map, pos: (usize, usize)) -> usize {
+    let possible_obstruction_positions = map
+        .0
+        .indexed_iter()
+        .filter(|x| x.1 == &MapSquare::Empty)
+        .map(|x| x.0);
+
+    let mut loop_causing_positions = 0;
+
+    for obstruction_pos in possible_obstruction_positions {
+        let mut obstructed_map = map.clone();
+        *(obstructed_map
+            .0
+            .get_mut(obstruction_pos.0, obstruction_pos.1)
+            .unwrap()) = MapSquare::Obstacle;
+        if patrol(&mut obstructed_map, pos) {
+            loop_causing_positions += 1;
+        }
+    }
+
+    loop_causing_positions
 }
 
 fn find_start_pos(input: &str) -> Option<(usize, usize)> {
@@ -37,18 +64,33 @@ fn find_start_pos(input: &str) -> Option<(usize, usize)> {
         .next()
 }
 
-fn patrol(map: &mut Map, mut pos: (usize, usize)) {
+/// Runs a guard patrol on the given map with the given starting position.
+/// Always starts facing north.
+/// Returns true if the patrol ends with a loop
+/// Returns false if the patrol ends by leaving the map
+fn patrol(map: &mut Map, mut pos: (usize, usize)) -> bool {
     let mut facing = Facing::North;
+    let mut step_cache = HashSet::new();
 
     loop {
         if let Some(r) = map.0.get_mut(pos.0, pos.1) {
             *r = MapSquare::Visited;
         }
 
+        let cache_pos = pos;
+        let instruction = step(map, pos, facing);
+        let cache_entry = (cache_pos.0, cache_pos.1, instruction.clone());
+        if step_cache.contains(&cache_entry) {
+            // looks like we're looping, because we've been in this position with this instruction before
+            return true;
+        }
+
+        step_cache.insert(cache_entry);
+
         match step(map, pos, facing) {
             Instruction::Turn => facing = facing.turn_right(),
             Instruction::MoveTo { row, col } => pos = (row, col),
-            Instruction::LeaveArea => break,
+            Instruction::LeaveArea => return false,
         }
     }
 }
@@ -69,6 +111,7 @@ fn step(map: &Map, guard_pos: (usize, usize), guard_facing: Facing) -> Instructi
     }
 }
 
+#[derive(Hash, Eq, PartialEq, Clone)]
 enum Instruction {
     Turn,
     MoveTo { row: usize, col: usize },
@@ -191,4 +234,15 @@ fn test_part1() {
 
     let visited_count = part1(map, start_pos);
     assert_eq!(visited_count, 41);
+}
+
+#[test]
+fn test_part2() {
+    let map = Map::try_from(TEST_MAP).unwrap();
+    let start_pos = find_start_pos(TEST_MAP).unwrap();
+
+    assert_eq!(start_pos, (6, 4));
+
+    let obstruction_positions = part2(map, start_pos);
+    assert_eq!(obstruction_positions, 6);
 }
