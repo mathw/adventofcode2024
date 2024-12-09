@@ -7,6 +7,7 @@ mod day4;
 mod day5;
 mod day6;
 mod day7;
+mod day9;
 mod grid_extensions;
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -23,6 +24,11 @@ fn main() -> Result<(), Box<dyn Error>> {
             5 => day5::run(),
             6 => day6::run(),
             7 => day7::run(),
+            8 => {
+                println!("Day 8 looked unpleasant. Maybe when I've looked up how to do that kind of line-finding I'll do it");
+                Ok(())
+            }
+            9 => day9::run(),
             _ => Err(format!("Unrecognised day {}", daynum).into()),
         }
     } else {
